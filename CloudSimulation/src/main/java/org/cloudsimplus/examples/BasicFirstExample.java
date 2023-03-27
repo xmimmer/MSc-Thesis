@@ -60,7 +60,6 @@ public class BasicFirstExample {
     private static final int  HOST_RAM = 2048; //in Megabytes
     private static final long HOST_BW = 10_000; //in Megabits/s
     private static final long HOST_STORAGE = 1_000_000; //in Megabytes
-
     private static final int VMS = 2;
     private static final int VM_PES = 4;
 
