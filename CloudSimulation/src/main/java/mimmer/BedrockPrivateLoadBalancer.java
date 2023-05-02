@@ -70,7 +70,7 @@ public class BedrockPrivateLoadBalancer {
     private int createdVms;
 
     //Cloudlets (User-defined workload)
-    private int cloudlets = 1000;
+    private int cloudlets = 0;
     private int cloudlet_pes = 2;
     private static final long[] CLOUDLET_LENGTHS = {10000, 20000, 30000, 40000, 50000};
 
@@ -129,6 +129,11 @@ public class BedrockPrivateLoadBalancer {
         finishedCloudlets.sort(sortByVmId.thenComparing(sortByStartTime));
 
         new CloudletsTableBuilder(finishedCloudlets).build();
+
+        int cloudletsNumber = finishedCloudlets.size();
+        System.out.println("----------------------------");
+        System.out.println(cloudletsNumber);
+        System.out.println("----------------------------");
     }
 
     private void createCloudletList() {
@@ -139,8 +144,9 @@ public class BedrockPrivateLoadBalancer {
 
     private void createNewCloudlets(final EventInfo info) {
         final long time = (long) info.getTime();
-        if (time % CLOUDLETS_CREATION_INTERVAL == 0 && time <= 50) {
-            final int cloudletsNumber = 4;
+        System.out.println(time);
+        if (time % CLOUDLETS_CREATION_INTERVAL == 0 && time < 50) {
+            final int cloudletsNumber = 10;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {

@@ -70,9 +70,10 @@ public class BedrockPrivate {
     private int createdVms;
 
     //Cloudlets (User-defined workload)
-    private int cloudlets = 1000;
+    private int cloudlets = 0;
     private int cloudlet_pes = 2;
     private static final long[] CLOUDLET_LENGTHS = {10000, 20000, 30000, 40000, 50000};
+    private int createdCloudlets;
 
 
     //Others
@@ -94,16 +95,19 @@ public class BedrockPrivate {
         final long seed = 1;
         rand = new UniformDistr(0, CLOUDLET_LENGTHS.length, seed);
         hostList = new ArrayList<>(hosts);
+        cloudletList = new ArrayList<>(cloudlets);
 
         simulation = new CloudSim();
+        simulation.addOnClockTickListener(this::createNewCloudlets);
 
         datacenter = createDatacenter();
         broker = new DatacenterBrokerSimple(simulation);
 
         vmList = createVms();
-        cloudletList = createCloudlets();
+        //cloudletList = createCloudlets();
         broker.setVmDestructionDelay(10.0);
 
+        createCloudletList();
         broker.submitVmList(vmList);
         broker.submitCloudletList(cloudletList);
 
@@ -119,11 +123,15 @@ public class BedrockPrivate {
 
     private void printSimulationResults() {
         final List<Cloudlet> finishedCloudlets = broker.getCloudletFinishedList();
+        int cloudletsNumber = finishedCloudlets.size();
         final Comparator<Cloudlet> sortByVmId = comparingDouble(c -> c.getVm().getId());
         final Comparator<Cloudlet> sortByStartTime = comparingDouble(Cloudlet::getExecStartTime);
         finishedCloudlets.sort(sortByVmId.thenComparing(sortByStartTime));
 
         new CloudletsTableBuilder(finishedCloudlets).build();
+        System.out.println("----------------------------");
+        System.out.println(cloudletsNumber);
+        System.out.println("----------------------------");
     }
 
     private Datacenter createDatacenter() {
@@ -269,5 +277,39 @@ public class BedrockPrivate {
                     powerModel.getTotalStartups(), powerModel.getTotalShutDownTime(), powerModel.getTotalShutDownPower());
 
         });
+    }
+    private void createNewCloudlets(final EventInfo info) {
+        final long time = (long) info.getTime();
+        System.out.println(time);
+        if (time % CLOUDLETS_CREATION_INTERVAL == 0 && time < 50) {
+            final int cloudletsNumber = 10;
+            System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
+            final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
+            for (int i = 0; i < cloudletsNumber; i++) {
+                final Cloudlet cloudlet = createCloudlet();
+                cloudletList.add(cloudlet);
+                newCloudlets.add(cloudlet);
+            }
+
+            broker.submitCloudletList(newCloudlets);
+        }
+    }
+    private Cloudlet createCloudlet() {
+        final int id = createdCloudlets++;
+        final var utilizationModelDynamic = new UtilizationModelDynamic(0.1);
+
+        //Randomly selects a length for the cloudlet
+        final long length = CLOUDLET_LENGTHS[(int) rand.sample()];
+        return new CloudletSimple(id, length, cloudlet_pes)
+                .setFileSize(1024)
+                .setOutputSize(1024)
+                .setUtilizationModelBw(utilizationModelDynamic)
+                .setUtilizationModelRam(utilizationModelDynamic)
+                .setUtilizationModelCpu(new UtilizationModelFull());
+    }
+    private void createCloudletList() {
+        for (int i = 0; i < cloudlets; i++) {
+            cloudletList.add(createCloudlet());
+        }
     }
 }

@@ -117,7 +117,7 @@ public class LoadBalancerByHorizontalVmScalingExample {
     private static final int HOSTS = 50;
     private static final int HOST_PES = 32;
     private static final int VMS = 4;
-    private static final int CLOUDLETS = 6;
+    private static final int CLOUDLETS = 0;
     private final CloudSim simulation;
     private final Datacenter dc0;
     private final DatacenterBroker broker0;
