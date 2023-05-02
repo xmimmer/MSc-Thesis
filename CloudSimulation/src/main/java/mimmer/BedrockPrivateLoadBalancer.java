@@ -12,6 +12,7 @@ import org.cloudbus.cloudsim.distributions.ContinuousDistribution;
 import org.cloudbus.cloudsim.distributions.UniformDistr;
 import org.cloudbus.cloudsim.hosts.Host;
 import org.cloudbus.cloudsim.hosts.HostSimple;
+import org.cloudbus.cloudsim.power.models.PowerModelHost;
 import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.provisioners.PeProvisionerSimple;
 import org.cloudbus.cloudsim.provisioners.ResourceProvisionerSimple;
@@ -53,13 +54,13 @@ public class BedrockPrivateLoadBalancer {
     private int host_pes = 32; // 32 CPU Cores per host
     private int host_ram = 64*RAM; // 64GB RAM
     private int host_bw = 10000000; // 10Gbps
-    private int host_storage = 128000; // 128 GB
+    private int host_storage = 256000; // 256 GB
     private int host_startup_delay = 5; // Seconds
     private int host_shutdown_delay = 3; // Seconds
     private int host_startup_power = 5; // Startup power in Watts
     private int host_shutdown_power = 3; // Shutdown power in Watts
     private int static_power = 35; // Idle power in Watts
-    private int max_power = 50; // Max power in Watts
+    private int max_power = 100; // Max power in Watts
 
     //Virtual Machines
     private int VMs = hosts*3;
@@ -69,7 +70,7 @@ public class BedrockPrivateLoadBalancer {
     private int createdVms;
 
     //Cloudlets (User-defined workload)
-    private int cloudlets = 50;
+    private int cloudlets = 1000;
     private int cloudlet_pes = 2;
     private static final long[] CLOUDLET_LENGTHS = {10000, 20000, 30000, 40000, 50000};
 
@@ -117,6 +118,7 @@ public class BedrockPrivateLoadBalancer {
         printTotalVmsCost();
         printHostsCpuUtilizationAndPowerConsumption();
         printVmsCpuUtilizationAndPowerConsumption();
+        printHostsUpTime();
 
     }
 
@@ -161,22 +163,23 @@ public class BedrockPrivateLoadBalancer {
 
         // Those are monetary values. Consider any currency you want (such as Dollar)
         dc.getCharacteristics()
-                .setCostPerSecond(0.005)
-                .setCostPerMem(0.001)
-                .setCostPerStorage(0.0005)
-                .setCostPerBw(0.000005);
+                .setCostPerSecond(0.002)
+                .setCostPerMem(0.0001)
+                .setCostPerStorage(0.00002)
+                .setCostPerBw(0.000001);
         return dc;
     }
 
     private Host createHost(int id) {
         final List<Pe> peList = new ArrayList<>(host_pes);
+
         for (int i = 0; i < host_pes; i++) {
             peList.add(new PeSimple(host_mips, new PeProvisionerSimple()));
         }
 
         final var host = new HostSimple(host_ram, host_bw, host_storage, peList);
-        final var powerModel = new PowerModelHostSimple(max_power, static_power);
 
+        final var powerModel = new PowerModelHostSimple(max_power, static_power);
        powerModel.setStartupDelay(host_startup_delay)
                 .setShutDownDelay(host_shutdown_delay)
                 .setStartupPower(host_startup_power)
@@ -184,7 +187,9 @@ public class BedrockPrivateLoadBalancer {
 
         host.setRamProvisioner(new ResourceProvisionerSimple())
                 .setBwProvisioner(new ResourceProvisionerSimple())
-                .setVmScheduler(new VmSchedulerTimeShared());
+                .setVmScheduler(new VmSchedulerTimeShared())
+                .setPowerModel(powerModel);
+
         host.setId(id);
         host.enableUtilizationStats();
 
@@ -293,5 +298,21 @@ public class BedrockPrivateLoadBalancer {
                     "Vm   %2d CPU Usage Mean: %6.1f%% | Power Consumption Mean: %8.0f W%n",
                     vm.getId(), cpuStats.getMean() *100, vmPower);
         }
+    }
+    private void printHostsUpTime() {
+        System.out.printf("%nHosts' up time (total time each Host was powered on)%n");
+        datacenter.getHostList().stream().filter(Host::hasEverStarted).forEach(host -> {
+            final PowerModelHost powerModel = host.getPowerModel();
+            System.out.printf("  Host %2d%n", host.getId());
+
+            System.out.printf(
+                    "     Total Up time:  %3.0f secs |  Startup time: %3.0f secs | Startup power:  %3.0f watts%n",
+                    host.getTotalUpTime(), powerModel.getTotalStartupTime(), powerModel.getTotalStartupPower());
+
+            System.out.printf(
+                    "     Activations:    %3d      | Shutdown time: %3.0f secs | Shutdown power: %3.0f watts%n",
+                    powerModel.getTotalStartups(), powerModel.getTotalShutDownTime(), powerModel.getTotalShutDownPower());
+
+        });
     }
 }
