@@ -39,20 +39,22 @@ import java.util.function.Predicate;
 import static java.util.Comparator.comparingDouble;
 import static java.util.Comparator.comparingLong;
 
-
 public class BedrockPrivateLoadBalancer {
 
     //Conversion
-    int RAM = 1024;
+    int GB = 1000;
 
-    //Datacenter
-    private int datacenters = 1;
+    //Datacenter(s)
+    private int datacenters = 1; // Amount of data centers
+    private static final int scheduling_interval = 5; // Sets the scheduling delay to process each event received by the Datacenter (Seconds)
+    private static final int cloudlets_creation_interval = scheduling_interval * 2; // Interval between creation of cloudlets
 
-    //Hosts
-    private int hosts = 10; // 10 Servers
-    private int host_mips = 1000; // Million instructions per second
+
+    //Host properties
+    private int hosts = 10; // 10 Hosts representing physical servers
+    private int host_mips = 1000; // Million instructions per second (MIPS) of each host
     private int host_pes = 32; // 32 CPU Cores per host
-    private int host_ram = 64*RAM; // 64GB RAM
+    private int host_ram = 64*GB; // 64GB RAM
     private int host_bw = 10000000; // 10Gbps
     private int host_storage = 256000; // 256 GB
     private int host_startup_delay = 5; // Seconds
@@ -62,23 +64,21 @@ public class BedrockPrivateLoadBalancer {
     private int static_power = 35; // Idle power in Watts
     private int max_power = 100; // Max power in Watts
 
-    //Virtual Machines
-    private int VMs = hosts*3;
-    private int VM_ram = 8*RAM;
-    private int VM_pes = 8;
-    private int VM_bw = 500000;
+    // Virtual Machines
+    private int VMs = hosts*3; // Amount of virtual machines in total
+    private int VM_ram = 8*GB; // RAM of each virtual machine (MB)
+    private int VM_pes = 8; // CPU cores per virtual machine
+    private int VM_bw = 500000; // Bandwidth capacity per virtual machine (Mbps)
+    private int VM_storage = 50000; // Storage capacity per virtual machine (MB)
     private int createdVms;
 
-    //Cloudlets (User-defined workload)
-    private int cloudlets = 0;
-    private int cloudlet_pes = 2;
-    private static final long[] CLOUDLET_LENGTHS = {10000, 20000, 30000, 40000, 50000};
+    // Cloudlets (User-defined workload)
+    private int cloudlets = 0; // Initial amount of cloudlets representing workload (Can be set to 0 for dynamic cloudlets only)
+    private int cloudlet_pes = 2; // Number of required PE's to run each cloudlet
+    private static final long[] CLOUDLET_LENGTHS = {10000, 20000, 30000, 40000, 50000}; // Range of possible cloudlet sizes
+    private int createdCloudlets; // Variable tracking number of created cloudlets
 
-    private int createdCloudlets;
-
-    //Others
-    private static final int SCHEDULING_INTERVAL = 5;
-    private static final int CLOUDLETS_CREATION_INTERVAL = SCHEDULING_INTERVAL * 2;
+    // Declaration of other simulation components
     private final CloudSim simulation;
     private final Datacenter datacenter;
     private final DatacenterBroker broker;
@@ -97,18 +97,18 @@ public class BedrockPrivateLoadBalancer {
         hostList = new ArrayList<>(hosts);
         vmList = new ArrayList<>(VMs);
         cloudletList = new ArrayList<>(cloudlets);
+        createCloudletList();
 
         simulation = new CloudSim();
         simulation.addOnClockTickListener(this::createNewCloudlets);
 
         datacenter = createDatacenter();
-        broker = new DatacenterBrokerSimple(simulation);
 
-        broker.setVmDestructionDelay(10.0);
+        broker = new DatacenterBrokerSimple(simulation);
+        broker.setVmDestructionDelay(60.0);
 
         vmList.addAll(createListOfScalableVms(VMs));
 
-        createCloudletList();
         broker.submitVmList(vmList);
         broker.submitCloudletList(cloudletList);
 
@@ -122,50 +122,13 @@ public class BedrockPrivateLoadBalancer {
 
     }
 
-    private void printSimulationResults() {
-        final List<Cloudlet> finishedCloudlets = broker.getCloudletFinishedList();
-        final Comparator<Cloudlet> sortByVmId = comparingDouble(c -> c.getVm().getId());
-        final Comparator<Cloudlet> sortByStartTime = comparingDouble(Cloudlet::getExecStartTime);
-        finishedCloudlets.sort(sortByVmId.thenComparing(sortByStartTime));
-
-        new CloudletsTableBuilder(finishedCloudlets).build();
-
-        int cloudletsNumber = finishedCloudlets.size();
-        System.out.println("----------------------------");
-        System.out.println(cloudletsNumber);
-        System.out.println("----------------------------");
-    }
-
-    private void createCloudletList() {
-        for (int i = 0; i < cloudlets; i++) {
-            cloudletList.add(createCloudlet());
-        }
-    }
-
-    private void createNewCloudlets(final EventInfo info) {
-        final long time = (long) info.getTime();
-        System.out.println(time);
-        if (time % CLOUDLETS_CREATION_INTERVAL == 0 && time < 30) {
-            final int cloudletsNumber = 3;
-            System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
-            final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
-            for (int i = 0; i < cloudletsNumber; i++) {
-                final Cloudlet cloudlet = createCloudlet();
-                cloudletList.add(cloudlet);
-                newCloudlets.add(cloudlet);
-            }
-
-            broker.submitCloudletList(newCloudlets);
-        }
-    }
-
     private Datacenter createDatacenter() {
         for (int i = 0; i < hosts; i++) {
             hostList.add(createHost(i));
         }
 
         //Uses a VmAllocationPolicySimple by default to allocate VMs
-        final Datacenter dc = new DatacenterSimple(simulation, hostList).setSchedulingInterval(SCHEDULING_INTERVAL);
+        final Datacenter dc = new DatacenterSimple(simulation, hostList).setSchedulingInterval(scheduling_interval);
 
         // Those are monetary values. Consider any currency you want (such as Dollar)
         dc.getCharacteristics()
@@ -202,6 +165,17 @@ public class BedrockPrivateLoadBalancer {
         return host;
     }
 
+    private Vm createVm() {
+        final int id = createdVms++;
+        final var vm = new VmSimple(id, host_mips, VM_pes);
+        vm.setRam(VM_ram).setBw(VM_bw).setSize(VM_storage);
+        vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
+        vm.enableUtilizationStats();
+
+        return vm;
+
+    }
+
     private List<Vm> createListOfScalableVms(final int vmsNumber) {
         final List<Vm> newList = new ArrayList<>(vmsNumber);
         for (int i = 0; i < vmsNumber; i++) {
@@ -226,30 +200,6 @@ public class BedrockPrivateLoadBalancer {
         return vm.getCpuPercentUtilization() > 0.7;
     }
 
-    private Vm createVm() {
-        final int id = createdVms++;
-        final var vm = new VmSimple(id, host_mips, VM_pes);
-        vm.setRam(VM_ram).setBw(VM_bw).setSize(10000);
-        vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
-        vm.enableUtilizationStats();
-
-        return vm;
-
-    }
-
-    private Cloudlet createCloudlet() {
-        final int id = createdCloudlets++;
-        final var utilizationModelDynamic = new UtilizationModelDynamic(0.1);
-
-        //Randomly selects a length for the cloudlet
-        final long length = CLOUDLET_LENGTHS[(int) rand.sample()];
-        return new CloudletSimple(id, length, cloudlet_pes)
-                .setFileSize(1024)
-                .setOutputSize(1024)
-                .setUtilizationModelBw(utilizationModelDynamic)
-                .setUtilizationModelRam(utilizationModelDynamic)
-                .setUtilizationModelCpu(new UtilizationModelFull());
-    }
     private void printTotalVmsCost() {
         System.out.println();
         double totalCost = 0.0;
@@ -320,5 +270,54 @@ public class BedrockPrivateLoadBalancer {
                     powerModel.getTotalStartups(), powerModel.getTotalShutDownTime(), powerModel.getTotalShutDownPower());
 
         });
+    }
+
+    private void createNewCloudlets(final EventInfo info) {
+        final long time = (long) info.getTime();
+        System.out.println(time);
+        if (time % cloudlets_creation_interval == 0 && time < 30) {
+            final int cloudletsNumber = 3;
+            System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
+            final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
+            for (int i = 0; i < cloudletsNumber; i++) {
+                final Cloudlet cloudlet = createCloudlet();
+                cloudletList.add(cloudlet);
+                newCloudlets.add(cloudlet);
+            }
+
+            broker.submitCloudletList(newCloudlets);
+        }
+    }
+    private Cloudlet createCloudlet() {
+        final int id = createdCloudlets++;
+        final var utilizationModelDynamic = new UtilizationModelDynamic(0.1);
+
+        //Randomly selects a length for the cloudlet
+        final long length = CLOUDLET_LENGTHS[(int) rand.sample()];
+        return new CloudletSimple(id, length, cloudlet_pes)
+                .setFileSize(1024)
+                .setOutputSize(1024)
+                .setUtilizationModelBw(utilizationModelDynamic)
+                .setUtilizationModelRam(utilizationModelDynamic)
+                .setUtilizationModelCpu(new UtilizationModelFull());
+    }
+    private void createCloudletList() {
+        for (int i = 0; i < cloudlets; i++) {
+            cloudletList.add(createCloudlet());
+        }
+    }
+    private void printSimulationResults() {
+        final List<Cloudlet> finishedCloudlets = broker.getCloudletFinishedList();
+        final Comparator<Cloudlet> sortByVmId = comparingDouble(c -> c.getVm().getId());
+        final Comparator<Cloudlet> sortByStartTime = comparingDouble(Cloudlet::getExecStartTime);
+        finishedCloudlets.sort(sortByVmId.thenComparing(sortByStartTime));
+
+        new CloudletsTableBuilder(finishedCloudlets).build();
+
+        int cloudletsNumber = finishedCloudlets.size();
+
+        System.out.println("----------------------------");
+        System.out.println(cloudletsNumber);
+        System.out.println("----------------------------");
     }
 }
