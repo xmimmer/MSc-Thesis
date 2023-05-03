@@ -281,8 +281,8 @@ public class BedrockPrivate {
     private void createNewCloudlets(final EventInfo info) {
         final long time = (long) info.getTime();
         System.out.println(time);
-        if (time % CLOUDLETS_CREATION_INTERVAL == 0 && time < 50) {
-            final int cloudletsNumber = 10;
+        if (time % CLOUDLETS_CREATION_INTERVAL == 0 && time < 30) {
+            final int cloudletsNumber = 3;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {
@@ -296,7 +296,7 @@ public class BedrockPrivate {
     }
     private Cloudlet createCloudlet() {
         final int id = createdCloudlets++;
-        final var utilizationModelDynamic = new UtilizationModelDynamic(0.1);
+        final var utilizationModelDynamic = new UtilizationModelDynamic(0.7);
 
         //Randomly selects a length for the cloudlet
         final long length = CLOUDLET_LENGTHS[(int) rand.sample()];
