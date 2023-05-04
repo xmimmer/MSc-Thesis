@@ -65,7 +65,7 @@ public class BedrockPrivateLoadBalancer {
     private int max_power = 100; // Max power in Watts
 
     // Virtual Machines
-    private int VMs = hosts*3; // Amount of virtual machines in total
+    private int VMs = hosts*2; // Amount of virtual machines in total
     private int VM_ram = 8*GB; // RAM of each virtual machine (MB)
     private int VM_pes = 8; // CPU cores per virtual machine
     private int VM_bw = 500000; // Bandwidth capacity per virtual machine (Mbps)
@@ -116,7 +116,7 @@ public class BedrockPrivateLoadBalancer {
 
         printSimulationResults();
         printTotalVmsCost();
-        printHostsCpuUtilizationAndPowerConsumption();
+        printHostCpuUtilizationAndPowerConsumption();
         printVmsCpuUtilizationAndPowerConsumption();
         printHostsUpTime();
 
@@ -222,25 +222,36 @@ public class BedrockPrivateLoadBalancer {
                 totalNonIdleVms, broker.getVmsNumber(), datacenter.getId(),
                 processingTotalCost, memoryTotaCost, storageTotalCost, bwTotalCost, totalCost);
     }
-    private void printHostCpuUtilizationAndPowerConsumption(final Host host) {
-        final HostResourceStats cpuStats = host.getCpuUtilizationStats();
+    private void printHostCpuUtilizationAndPowerConsumption() {
+        double averageCpuMean = 0;
+        double averageHostPowerConsumption = 0;
 
-        //The total Host's CPU utilization for the time specified by the map key
-        final double utilizationPercentMean = cpuStats.getMean();
-        final double watts = host.getPowerModel().getPower(utilizationPercentMean);
-        System.out.printf(
-                "Host %2d CPU Usage mean: %6.1f%% | Power Consumption mean: %8.0f W%n",
-                host.getId(), utilizationPercentMean * 100, watts);
-    }
-    private void printHostsCpuUtilizationAndPowerConsumption() {
-        System.out.println();
-        for (final Host host : hostList) {
-            printHostCpuUtilizationAndPowerConsumption(host);
+        for (Host h : hostList) {
+            final HostResourceStats cpuStats = h.getCpuUtilizationStats();
+
+            //The total Host's CPU utilization for the time specified by the map key
+            final double utilizationPercentMean = cpuStats.getMean();
+            averageCpuMean += utilizationPercentMean*100;
+            final double watts = h.getPowerModel().getPower(utilizationPercentMean);
+            averageHostPowerConsumption += watts;
+            System.out.printf(
+                    "Host %2d CPU Usage mean: %6.1f%% | Power Consumption mean: %8.0f W%n",
+                    h.getId(), utilizationPercentMean * 100, watts);
+
         }
-        System.out.println();
+
+        System.out.println("------Average Host CPU Mean------");
+        System.out.println(averageCpuMean/hostList.size());
+        System.out.println("------Average Host Power Consumption-----");
+        System.out.println(averageHostPowerConsumption/hostList.size());
+        System.out.println(" ");
+
     }
     private void printVmsCpuUtilizationAndPowerConsumption() {
         vmList.sort(comparingLong(vm -> vm.getHost().getId()));
+        double averageCpuMean = 0;
+        double averageVmPowerConsumption = 0;
+
         for (Vm vm : vmList) {
             final var powerModel = vm.getHost().getPowerModel();
             final double hostStaticPower = powerModel instanceof PowerModelHostSimple powerModelHost ? powerModelHost.getStaticPower() : 0;
@@ -249,11 +260,17 @@ public class BedrockPrivateLoadBalancer {
             //VM CPU utilization relative to the host capacity
             final double vmRelativeCpuUtilization = vm.getCpuUtilizationStats().getMean() / vm.getHost().getVmCreatedList().size();
             final double vmPower = powerModel.getPower(vmRelativeCpuUtilization) - hostStaticPower + hostStaticPowerByVm; // W
+            averageVmPowerConsumption += vmPower;
             final VmResourceStats cpuStats = vm.getCpuUtilizationStats();
+            averageCpuMean += cpuStats.getMean()*100;
             System.out.printf(
                     "Vm   %2d CPU Usage Mean: %6.1f%% | Power Consumption Mean: %8.0f W%n",
                     vm.getId(), cpuStats.getMean() *100, vmPower);
         }
+        System.out.println("--------Average CPU Mean-------");
+        System.out.println(averageCpuMean/vmList.size());
+        System.out.println("--------Average VM Power Consumption-----");
+        System.out.println(averageVmPowerConsumption/vmList.size());
     }
     private void printHostsUpTime() {
         System.out.printf("%nHosts' up time (total time each Host was powered on)%n");
@@ -276,7 +293,7 @@ public class BedrockPrivateLoadBalancer {
         final long time = (long) info.getTime();
         System.out.println(time);
         if (time % cloudlets_creation_interval == 0 && time < 30) {
-            final int cloudletsNumber = 3;
+            final int cloudletsNumber = 5;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {
