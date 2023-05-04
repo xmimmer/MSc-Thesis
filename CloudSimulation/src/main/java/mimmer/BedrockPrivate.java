@@ -56,12 +56,12 @@ public class BedrockPrivate {
     private int host_ram = 64*GB; // Host RAM (MB)
     private int host_bw = 10000000; // Host bandwidth (Mbps)
     private int host_storage = 256000; // Host storage (MB)
-    private int host_startup_delay = 5; // Host startup delay (Seconds)
-    private int host_shutdown_delay = 3; // Host shutdown delay (Seconds)
-    private int host_startup_power = 5; // Host startup power consumption (Watts)
-    private int host_shutdown_power = 3; // Host shutdown power consumption (Watts)
-    private int host_static_power = 35; // Host idle power (Watts)
-    private int host_max_power = 100; // Host maximum power (Watts)
+    private int host_startup_delay = 10; // Host startup delay (Seconds)
+    private int host_shutdown_delay = 5; // Host shutdown delay (Seconds)
+    private int host_startup_power = 50; // Host startup power consumption (Watts)
+    private int host_shutdown_power = 10; // Host shutdown power consumption (Watts)
+    private int host_static_power = 100; // Host idle power (Watts)
+    private int host_max_power = 700; // Host maximum power (Watts)
 
     // Virtual Machines
     private int VMs = hosts*2; // Amount of virtual machines in total
@@ -113,8 +113,8 @@ public class BedrockPrivate {
 
         printSimulationResults();
         printTotalVmsCost();
-        printHostCpuUtilizationAndPowerConsumption();
-        printVmsCpuUtilizationAndPowerConsumption();
+        printHostCpuUtilizationAndPowerConsumption(simulation);
+        printVmsCpuUtilizationAndPowerConsumption(simulation);
         printHostsUpTime();
 
     }
@@ -128,19 +128,19 @@ public class BedrockPrivate {
         final Datacenter dc = new DatacenterSimple(simulation, hostList).setSchedulingInterval(scheduling_interval);
 
         //Pay-per-use pricing model (Dollars) (Only takes in CPU use and factors time)
-        /*dc.getCharacteristics()
+        dc.getCharacteristics()
                 .setCostPerSecond(0.00045)
                 .setCostPerMem(0)
                 .setCostPerStorage(0)
                 .setCostPerBw(0);
-*/
+
         //Fixed price of memory, storage and bandwidth (Dollars)
-        dc.getCharacteristics()
+        /*dc.getCharacteristics()
                 .setCostPerSecond(0)
                 .setCostPerMem(0.0005)
                 .setCostPerStorage(0.00001)
                 .setCostPerBw(0.000005);
-
+*/
 
         return dc;
     }
@@ -206,36 +206,41 @@ public class BedrockPrivate {
                 totalNonIdleVms, broker.getVmsNumber(), datacenter.getId(),
                 processingTotalCost, memoryTotaCost, storageTotalCost, bwTotalCost, totalCost);
     }
-    private void printHostCpuUtilizationAndPowerConsumption() {
-        double averageCpuMean = 0;
-        double averageHostPowerConsumption = 0;
+    private void printHostCpuUtilizationAndPowerConsumption(Simulation sim) {
+        double totalCpuMean = 0;
+        double totalHostPowerConsumption = 0;
 
-        for (Host h : hostList) {
-            final HostResourceStats cpuStats = h.getCpuUtilizationStats();
+        for (Host host : hostList) {
+            final HostResourceStats cpuStats = host.getCpuUtilizationStats();
 
         //The total Host's CPU utilization for the time specified by the map key
         final double utilizationPercentMean = cpuStats.getMean();
-        averageCpuMean += utilizationPercentMean*100;
-        final double watts = h.getPowerModel().getPower(utilizationPercentMean);
-        averageHostPowerConsumption += watts;
+            totalCpuMean += utilizationPercentMean*100;
+        final double watts = host.getPowerModel().getPower(utilizationPercentMean);
+            totalHostPowerConsumption += watts;
         System.out.printf(
                 "Host %2d CPU Usage mean: %6.1f%% | Power Consumption mean: %8.0f W%n",
-                h.getId(), utilizationPercentMean * 100, watts);
+                host.getId(), utilizationPercentMean * 100, watts);
 
         }
 
-        System.out.println("------Average Host CPU Mean------");
-        System.out.println(averageCpuMean/hostList.size());
-        System.out.println("------Average Host Power Consumption-----");
-        System.out.println(averageHostPowerConsumption/hostList.size());
-        System.out.println(" ");
+        double averageCpuMean = totalCpuMean / hostList.size();
+        double averageHostPowerConsumption = totalHostPowerConsumption / hostList.size();
 
+        System.out.println("------Average Host CPU Mean------");
+        System.out.println(averageCpuMean);
+        System.out.println("------Average Host Power Consumption-----");
+        System.out.println(averageHostPowerConsumption);
+        System.out.println("-------Total Host Power Consumption--------");
+        System.out.println(averageHostPowerConsumption*sim.clock());
+        System.out.println("---------Host kWh annually---------");
+        System.out.println((((averageHostPowerConsumption*sim.clock())*sim.clockInHours())/1000)*365);
     }
 
-    private void printVmsCpuUtilizationAndPowerConsumption() {
+    private void printVmsCpuUtilizationAndPowerConsumption(Simulation sim) {
         vmList.sort(comparingLong(vm -> vm.getHost().getId()));
-        double averageCpuMean = 0;
-        double averageVmPowerConsumption = 0;
+        double totalCpuMean = 0;
+        double totalVmPowerConsumption = 0;
 
         for (Vm vm : vmList) {
             final var powerModel = vm.getHost().getPowerModel();
@@ -245,17 +250,25 @@ public class BedrockPrivate {
             //VM CPU utilization relative to the host capacity
             final double vmRelativeCpuUtilization = vm.getCpuUtilizationStats().getMean() / vm.getHost().getVmCreatedList().size();
             final double vmPower = powerModel.getPower(vmRelativeCpuUtilization) - hostStaticPower + hostStaticPowerByVm; // W
-            averageVmPowerConsumption += vmPower;
+            totalVmPowerConsumption += vmPower;
             final VmResourceStats cpuStats = vm.getCpuUtilizationStats();
-            averageCpuMean += cpuStats.getMean()*100;
+            totalCpuMean += cpuStats.getMean()*100;
             System.out.printf(
                     "Vm   %2d CPU Usage Mean: %6.1f%% | Power Consumption Mean: %8.0f W%n",
                     vm.getId(), cpuStats.getMean() *100, vmPower);
         }
+
+        double averageCpuMean = totalCpuMean / vmList.size();
+        double averageVmPowerConsumption = totalVmPowerConsumption / vmList.size();
+
         System.out.println("--------Average CPU Mean-------");
-        System.out.println(averageCpuMean/vmList.size());
+        System.out.println(averageCpuMean);
         System.out.println("--------Average VM Power Consumption-----");
-        System.out.println(averageVmPowerConsumption/vmList.size());
+        System.out.println(averageVmPowerConsumption);
+        System.out.println("------Total VM Power Consumption------");
+        System.out.println(averageVmPowerConsumption*sim.clock());
+        System.out.println("---------VM kWh annually---------");
+        System.out.println((((averageVmPowerConsumption*sim.clock())*sim.clockInHours())/1000)*365);
     }
     private void printHostsUpTime() {
         System.out.printf("%nHosts' up time (total time each Host was powered on)%n");
@@ -276,8 +289,8 @@ public class BedrockPrivate {
     private void createNewCloudlets(final EventInfo info) {
         final long time = (long) info.getTime();
         System.out.println(time);
-        if (time % cloudlets_creation_interval == 0 && time < 30) {
-            final int cloudletsNumber = 50;
+        if (time % cloudlets_creation_interval == 0 && time < 20) {
+            final int cloudletsNumber = 110;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {
