@@ -317,7 +317,7 @@ public class BedrockPrivateLoadBalancer {
             final int cloudletsNumber = 235;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
-            for (int i = 0; i < cloudletsNumber; i++1) {
+            for (int i = 0; i < cloudletsNumber; i++) {
                 final Cloudlet cloudlet = createCloudlet();
                 cloudletList.add(cloudlet);
                 newCloudlets.add(cloudlet);
