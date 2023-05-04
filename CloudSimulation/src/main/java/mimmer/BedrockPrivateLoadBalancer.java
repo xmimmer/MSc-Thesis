@@ -130,12 +130,19 @@ public class BedrockPrivateLoadBalancer {
         //Uses a VmAllocationPolicySimple by default to allocate VMs
         final Datacenter dc = new DatacenterSimple(simulation, hostList).setSchedulingInterval(scheduling_interval);
 
-        // Those are monetary values. Consider any currency you want (such as Dollar)
+        //Pay-per-use pricing model (Dollars) (Only takes in CPU use and factors time)
+        /*dc.getCharacteristics()
+                .setCostPerSecond(0.00045)
+                .setCostPerMem(0)
+                .setCostPerStorage(0)
+                .setCostPerBw(0);
+*/
+        //Fixed price of memory, storage and bandwidth (Dollars)
         dc.getCharacteristics()
-                .setCostPerSecond(0.002)
-                .setCostPerMem(0.0001)
-                .setCostPerStorage(0.00002)
-                .setCostPerBw(0.000001);
+                .setCostPerSecond(0)
+                .setCostPerMem(0.0005)
+                .setCostPerStorage(0.00001)
+                .setCostPerBw(0.000005);
         return dc;
     }
 
