@@ -3,20 +3,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Without load-balancer
-x = np.array([20, 60, 160, 320, 440, 640])
-y = np.array([86.95, 205.95, 585.71 , 1815.56, 3370.16, 7515])
+x = np.array([20, 40, 100, 160, 200, 240, 280, 400, 800, 1200, 1600, 2400])
+y = np.array([9.51, 22.61, 44.24, 47.34, 48.27, 54.40,61.02 , 72.67, 88.24, 89.94, 90.29, 90.58])
 
 # With load-balancer
-x1 = np.array([20, 75, 280, 600, 940, 1200])
-y1 = np.array([65.52, 80.85, 175.50, 545.59, 1155.36, 1775.81])
+x1 = np.array([20, 40, 100, 160, 200, 240, 280, 400, 800, 1200, 1600, 2400])
+y1 = np.array([9.51, 22.61, 44.24, 47.34, 48.27, 54.40, 61.04, 73.97, 94.17, 96.71, 97.92, 98.91])
 
 sns.set_style("dark")
-sns.lineplot(x=x, y=y, label='With load-balancer')
-sns.lineplot(x=x1, y=y1, label='Without load-balancer')
+sns.lineplot(x=x, y=y, label='Without load-balancer')
+sns.lineplot(x=x1, y=y1, label='With load-balancer')
 
+plt.ylim(0, 100)
 plt.xlabel("Number of Cloudlets")
-plt.ylabel("Execution Time (Seconds)")
-plt.title('Private Deployment - Execution Times')
+plt.ylabel("CPU Utilization %")
+plt.title('Private Deployment - CPU Utilization')
 plt.legend(loc='lower right')
 
 plt.show()

@@ -314,7 +314,7 @@ public class BedrockPrivateLoadBalancer {
         final long time = (long) info.getTime();
         System.out.println(time);
         if (time % cloudlets_creation_interval == 0 && time < 20) {
-            final int cloudletsNumber = 235;
+            final int cloudletsNumber = 40;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {
@@ -328,7 +328,7 @@ public class BedrockPrivateLoadBalancer {
     }
     private Cloudlet createCloudlet() {
         final int id = createdCloudlets++;
-        final var utilizationModelDynamic = new UtilizationModelDynamic(0.1);
+        final var utilizationModelDynamic = new UtilizationModelDynamic(.1, .7);
 
         //Randomly selects a length for the cloudlet
         final long length = CLOUDLET_LENGTHS[(int) rand.sample()];
