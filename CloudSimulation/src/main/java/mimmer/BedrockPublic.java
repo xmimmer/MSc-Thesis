@@ -18,16 +18,18 @@ import org.cloudbus.cloudsim.datacenters.DatacenterSimple;
 import org.cloudbus.cloudsim.hosts.Host;
 import org.cloudbus.cloudsim.hosts.HostSimple;
 import org.cloudbus.cloudsim.network.topologies.BriteNetworkTopology;
+import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.provisioners.PeProvisionerSimple;
+import org.cloudbus.cloudsim.provisioners.ResourceProvisionerSimple;
 import org.cloudbus.cloudsim.resources.Pe;
 import org.cloudbus.cloudsim.resources.PeSimple;
+import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModel;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
 import org.cloudbus.cloudsim.vms.Vm;
 import org.cloudbus.cloudsim.vms.VmSimple;
 import org.cloudsimplus.builders.tables.CloudletsTableBuilder;
 
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,20 +38,20 @@ import java.util.List;
  * cloudlets of 2 users. It also sets a network topology.
  */
 public class BedrockPublic {
-    private static final int VM_PES = 1;
 
-    //private final List<Datacenter> datacenterList;
-    private final Datacenter dc1;
-    private final Datacenter dc2;
-    //private final List<DatacenterBroker> brokerList;
-    private final DatacenterBroker broker1;
-    private final DatacenterBroker broker2;
+    //Datacenters
+    private Datacenter dc1;
+    private Datacenter dc2;
+    private static final int VM_PES = 1;
+    private DatacenterBroker broker1;
+    private DatacenterBroker broker2;
 
     private final List<Cloudlet> cloudletList1;
     private final List<Cloudlet> cloudletList2;
     private final List<Vm> vmList1;
     private final List<Vm> vmList2;
     private final CloudSim simulation;
+    private final List<Host> hostList;
 
     public static void main(String[] args) {
         new BedrockPublic();
@@ -61,14 +63,16 @@ public class BedrockPublic {
 
         vmList1 = new ArrayList<>();
         vmList2 = new ArrayList<>();
+        hostList = new ArrayList<>(10);
 
         simulation = new CloudSim();
 
-        dc1 = createDatacenter();
-        dc2 = createDatacenter();
+        createDatacenter1();
+        createDatacenter2();
 
         broker1 = new DatacenterBrokerSimple(simulation);
         broker2 = new DatacenterBrokerSimple(simulation);
+
 
         createNetwork();
         createAndSubmitVms();
@@ -83,6 +87,8 @@ public class BedrockPublic {
         printFinishedCloudletList(broker2);
 
         System.out.println(getClass().getSimpleName() + " finished!");
+
+
     }
 
     private void printFinishedCloudletList(DatacenterBroker broker) {
@@ -92,44 +98,45 @@ public class BedrockPublic {
     }
 
     private void createAndSubmitCloudlets() {
-        final long length = 40000;
+        final long length = 10000;
         final long fileSize = 300;
         final long outputSize = 300;
+
         final UtilizationModel utilizationModel = new UtilizationModelFull();
 
-        final Cloudlet cloudlet1 =
-                new CloudletSimple(length, VM_PES)
-                        .setFileSize(fileSize)
-                        .setOutputSize(outputSize)
-                        .setUtilizationModel(utilizationModel);
-
-        final Cloudlet cloudlet2 =
-                new CloudletSimple(length, VM_PES)
-                        .setFileSize(fileSize)
-                        .setOutputSize(outputSize)
-                        .setUtilizationModel(utilizationModel);
-
-        cloudletList1.add(cloudlet1);
-        cloudletList2.add(cloudlet2);
-
+        for(int i = 0; i <= 5; i++) {
+            final Cloudlet cloudlet = new CloudletSimple(length, VM_PES)
+                    .setSizes(fileSize)
+                    .setUtilizationModel(utilizationModel);
+            cloudletList1.add(cloudlet);
+        }
+        for(int i = 0; i <= 5; i++) {
+            final Cloudlet cloudlet = new CloudletSimple(length, VM_PES)
+                    .setSizes(fileSize)
+                    .setUtilizationModel(utilizationModel);
+            cloudletList2.add(cloudlet);
+        }
         broker1.submitCloudletList(cloudletList1);
         broker2.submitCloudletList(cloudletList2);
+
     }
 
     private void createAndSubmitVms() {
         final long size = 10000; //image size (Megabyte)
-        final int mips = 250;
+        final int mips = 1000;
         final int ram = 512; //vm memory (Megabyte)
         final long bw = 1000;
 
-        final Vm vm1 = new VmSimple(mips, VM_PES)
-                .setRam(ram).setBw(bw).setSize(size);
-
-        final Vm vm2 = new VmSimple(mips, VM_PES)
-                .setRam(ram).setBw(bw).setSize(size);
-
-        vmList1.add(vm1);
-        vmList2.add(vm2);
+        for(int i = 0; i<=5; i++) {
+            final Vm vm = new VmSimple(mips, VM_PES)
+                    .setRam(ram).setBw(bw).setSize(size);
+            vmList1.add(vm);
+        }
+        for(int i = 0; i<=5; i++) {
+            final Vm vm = new VmSimple(mips, VM_PES)
+                    .setRam(ram).setBw(bw).setSize(size);
+            vmList2.add(vm);
+        }
 
         broker1.submitVmList(vmList1);
         broker2.submitVmList(vmList2);
@@ -161,20 +168,44 @@ public class BedrockPublic {
         networkTopology.mapNode(broker2, briteNode);
     }
 
-    private Datacenter createDatacenter() {
-        final List<Host> hostList = new ArrayList<>();
-        final List<Pe> peList = new ArrayList<>();
+    private Datacenter createDatacenter1() {
+        for (int i = 0; i < 5; i++) {
+            hostList.add(createHost(i));
+        }
 
-        final long mips = 1000;
-        peList.add(new PeSimple(mips, new PeProvisionerSimple()));
+        final var dc1 = new DatacenterSimple(simulation, hostList);
+        dc1.setName("Datacenter1");
 
-        final long ram = 2048; // in Megabytes
-        final long storage = 1000000; // in Megabytes
-        final long bw = 10000; //in Megabits/s
+        return dc1;
+    }
+    private Datacenter createDatacenter2() {
 
-        final Host host = new HostSimple(ram, bw, storage, peList);
-        hostList.add(host);
+        for (int i = 0; i < 5; i++) {
+            hostList.add(createHost(i));
+        }
 
-        return new DatacenterSimple(simulation, hostList);
+        final var dc1 = new DatacenterSimple(simulation, hostList);
+        dc1.setName("Datacenter2");
+
+        return dc1;
+    }
+    private Host createHost(int id) {
+        final List<Pe> peList = new ArrayList<>(64);
+
+        for (int i = 0; i < 64; i++) {
+            peList.add(new PeSimple(1000, new PeProvisionerSimple()));
+        }
+
+        final var host = new HostSimple(1000000, 10000000, 1000000, peList);
+
+
+        host.setRamProvisioner(new ResourceProvisionerSimple())
+                .setBwProvisioner(new ResourceProvisionerSimple())
+                .setVmScheduler(new VmSchedulerTimeShared());
+
+        host.setId(id);
+        host.enableUtilizationStats();
+
+        return host;
     }
 }
