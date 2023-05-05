@@ -50,18 +50,18 @@ public class BedrockPrivate {
     private static final int cloudlets_creation_interval = scheduling_interval * 2; // Interval between creation of cloudlets
 
     // Host properties
-    private int hosts = 10; // Hosts representing physical servers
-    private int host_mips = 1000; // Million instructions per second (MIPS) per host
-    private int host_pes = 32; // Processing Elements (PE's) representing CPU cores per host
-    private int host_ram = 64*GB; // Host RAM (MB)
-    private int host_bw = 10000000; // Host bandwidth (Mbps)
-    private int host_storage = 256000; // Host storage (MB)
-    private int host_startup_delay = 10; // Host startup delay (Seconds)
-    private int host_shutdown_delay = 5; // Host shutdown delay (Seconds)
-    private int host_startup_power = 50; // Host startup power consumption (Watts)
-    private int host_shutdown_power = 10; // Host shutdown power consumption (Watts)
-    private int host_static_power = 100; // Host idle power (Watts)
-    private int host_max_power = 700; // Host maximum power (Watts)
+    private int hosts = 10; // 10 Hosts representing physical servers
+    private int host_mips = 1000; // Million instructions per second (MIPS) of each host
+    private int host_pes = 500; // 32 CPU Cores per host
+    private int host_ram = 1000*GB; // 64GB RAM
+    private int host_bw = 1000000000; // 10Gbps
+    private int host_storage = 256000000; // 256 GB
+    private int host_startup_delay = 10; // Seconds
+    private int host_shutdown_delay = 5; // Seconds
+    private int host_startup_power = 50; // Startup power in Watts
+    private int host_shutdown_power = 10; // Shutdown power in Watts
+    private int host_static_power = 100; // Idle power in Watts
+    private int host_max_power = 700; // Max power in Watts
 
     // Virtual Machines
     private int VMs = hosts*2; // Amount of virtual machines in total
@@ -290,7 +290,7 @@ public class BedrockPrivate {
         final long time = (long) info.getTime();
         System.out.println(time);
         if (time % cloudlets_creation_interval == 0 && time < 20) {
-            final int cloudletsNumber = 40;
+            final int cloudletsNumber = 50;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {
@@ -304,7 +304,7 @@ public class BedrockPrivate {
     }
     private Cloudlet createCloudlet() {
         final int id = createdCloudlets++;
-        final var utilizationModelDynamic = new UtilizationModelDynamic(.1 ,.7);
+        final var utilizationModelDynamic = new UtilizationModelDynamic(.7);
 
         //Randomly selects a length for the cloudlet
         final long length = CLOUDLET_LENGTHS[(int) rand.sample()];

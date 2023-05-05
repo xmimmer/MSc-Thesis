@@ -53,10 +53,10 @@ public class BedrockPrivateLoadBalancer {
     //Host properties
     private int hosts = 10; // 10 Hosts representing physical servers
     private int host_mips = 1000; // Million instructions per second (MIPS) of each host
-    private int host_pes = 32; // 32 CPU Cores per host
-    private int host_ram = 64*GB; // 64GB RAM
-    private int host_bw = 10000000; // 10Gbps
-    private int host_storage = 256000; // 256 GB
+    private int host_pes = 500; // 32 CPU Cores per host
+    private int host_ram = 1000*GB; // 64GB RAM
+    private int host_bw = 1000000000; // 10Gbps
+    private int host_storage = 256000000; // 256 GB
     private int host_startup_delay = 10; // Seconds
     private int host_shutdown_delay = 5; // Seconds
     private int host_startup_power = 50; // Startup power in Watts
@@ -65,7 +65,7 @@ public class BedrockPrivateLoadBalancer {
     private int max_power = 700; // Max power in Watts
 
     // Virtual Machines
-    private int VMs = hosts*2; // Amount of virtual machines in total
+    private int VMs = hosts*5; // Amount of virtual machines in total
     private int VM_ram = 8*GB; // RAM of each virtual machine (MB)
     private int VM_pes = 8; // CPU cores per virtual machine
     private int VM_bw = 500000; // Bandwidth capacity per virtual machine (Mbps)
@@ -265,15 +265,20 @@ public class BedrockPrivateLoadBalancer {
         vmList.sort(comparingLong(vm -> vm.getHost().getId()));
         double totalCpuMean = 0;
         double totalVmPowerConsumption = 0;
+        int vmListSize = vmList.size();
 
         for (Vm vm : vmList) {
+            if(Double.isNaN(vm.getCpuUtilizationStats().getMean()) || vm.getCpuUtilizationStats().getMean() == 0.0) {
+                vmListSize -= 1;
+                continue;
+            }
             final var powerModel = vm.getHost().getPowerModel();
             final double hostStaticPower = powerModel instanceof PowerModelHostSimple powerModelHost ? powerModelHost.getStaticPower() : 0;
             final double hostStaticPowerByVm = hostStaticPower / vm.getHost().getVmCreatedList().size();
 
             //VM CPU utilization relative to the host capacity
             final double vmRelativeCpuUtilization = vm.getCpuUtilizationStats().getMean() / vm.getHost().getVmCreatedList().size();
-            final double vmPower = powerModel.getPower(vmRelativeCpuUtilization) - hostStaticPower + hostStaticPowerByVm; // W
+            final double vmPower = powerModel.getPower(vmRelativeCpuUtilization) - hostStaticPower + hostStaticPowerByVm; //
             totalVmPowerConsumption += vmPower;
             final VmResourceStats cpuStats = vm.getCpuUtilizationStats();
             totalCpuMean += cpuStats.getMean()*100;
@@ -314,7 +319,7 @@ public class BedrockPrivateLoadBalancer {
         final long time = (long) info.getTime();
         System.out.println(time);
         if (time % cloudlets_creation_interval == 0 && time < 20) {
-            final int cloudletsNumber = 40;
+            final int cloudletsNumber = 50;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {
@@ -328,7 +333,7 @@ public class BedrockPrivateLoadBalancer {
     }
     private Cloudlet createCloudlet() {
         final int id = createdCloudlets++;
-        final var utilizationModelDynamic = new UtilizationModelDynamic(.1, .7);
+        final var utilizationModelDynamic = new UtilizationModelDynamic(.7);
 
         //Randomly selects a length for the cloudlet
         final long length = CLOUDLET_LENGTHS[(int) rand.sample()];
