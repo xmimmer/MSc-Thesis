@@ -3,12 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Pay-per-use
-x = np.array([20, 300, 640, 1000, 1300, 1500])
-y = np.array([5.02, 12.56, 35.83 , 78.55, 128.39, 168.45])
+x = np.array([8, 20, 40, 80, 200, 300, 400, 600, 800, 1600])
+y = np.array([1.45, 3.98, 7.97 , 17.68, 30.46, 46.33,68.01, 124.25, 203.73, 426.11])
 
 # Subscription
-x1 = np.array([20, 300, 640, 1000, 1300, 1500])
-y1 = np.array([150, 150, 150, 150, 150, 150])
+x1 = np.array([8, 20, 40, 80, 200, 300, 400, 600, 800, 1600])
+y1 = np.array([170, 170, 170, 170, 170, 170, 170, 170, 170, 170])
 
 sns.set_style("dark")
 sns.lineplot(x=x, y=y, label='Pay-per-use')

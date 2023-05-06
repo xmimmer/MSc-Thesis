@@ -3,19 +3,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Without load-balancer
-x = np.array([20, 60, 160, 320, 440, 640])
-y = np.array([15237.25, 51419.1, 186933.27 , 612980.21, 1115544.76, 2546133.48])
+#x = np.array([8, 20, 60, 200, 400, 600, 800])
+#y = np.array([47124, 64251, 301132 , 2101757 , 7537060,16491575, 28817240])
 
 # With load-balancer
-x1 = np.array([20, 75, 280, 600, 940, 1200])
-y1 = np.array([12112.41, 20419.59, 68169.79, 256734.84, 538478.41, 829405.79])
+#x1 = np.array([8, 20, 60, 200, 400, 600, 800])
+#y1 = np.array([25337, 64251, 293164, 1182974, 4397304, 9263742,16008984])
+
+# Without load-balancer
+x = np.array([8, 20, 60, 200, 400, 600, 800])
+y = np.array([0.7922, 1.1693, 12.1724 ,335.8550, 4147.1628, 19219.3738, 57401.1852])
+
+# With load-balancer
+x1 = np.array([8, 20, 60, 200, 400, 600, 800])
+y1 = np.array([0.4259, 1.1693, 9.4073, 64.2486, 605.6700, 2382.4596 ,6740.8942 ])
 
 sns.set_style("dark")
 sns.lineplot(x=x, y=y, label='Without load-balancer')
 sns.lineplot(x=x1, y=y1, label='With load-balancer')
 
 plt.xlabel("Number of Cloudlets")
-plt.ylabel("Total Power Consumption (Watts)")
+plt.ylabel("Power Consumption (kWh)")
 plt.title('Private Deployment - Power Consumption')
 plt.legend(loc='lower right')
 

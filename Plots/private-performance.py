@@ -3,16 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Without load-balancer
-x = np.array([20, 60, 160, 320, 440, 640])
-y = np.array([86.95, 205.95, 585.71 , 1815.56, 3370.16, 7515])
+x = np.array([8, 20, 60, 200, 400, 600, 800])
+y = np.array([60.52, 65.52, 145.52 , 575.27, 1980.85, 4195.16, 7170.85])
 
 # With load-balancer
-x1 = np.array([20, 75, 280, 600, 940, 1200])
-y1 = np.array([65.52, 80.85, 175.50, 545.59, 1155.36, 1775.81])
+x1 = np.array([8, 20, 60, 200, 400, 600, 800])
+y1 = np.array([60.52, 65.52, 115.52, 195.52, 495.85, 925.85, 1515.85])
 
 sns.set_style("dark")
-sns.lineplot(x=x, y=y, label='With load-balancer')
-sns.lineplot(x=x1, y=y1, label='Without load-balancer')
+sns.lineplot(x=x, y=y, label='Without load-balancer')
+sns.lineplot(x=x1, y=y1, label='With load-balancer')
 
 plt.xlabel("Number of Cloudlets")
 plt.ylabel("Execution Time (Seconds)")
