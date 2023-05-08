@@ -24,7 +24,7 @@ sns.lineplot(x=x1, y=y1, label='With load-balancer')
 
 plt.xlabel("Number of Cloudlets")
 plt.ylabel("Power Consumption (kWh)")
-plt.title('Private Deployment - Power Consumption')
-plt.legend(loc='lower right')
+plt.title('Private Deployment - Power Consumption in kWh')
+plt.legend(loc='upper left')
 
 plt.show()

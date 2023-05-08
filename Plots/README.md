@@ -5,9 +5,13 @@
  
  ![png1](images/private-performance.png)
 
- **Power Consumption**
+ **Total Power Consumption**
 
  ![png2](images/private-power-consumption.png)
+
+ **Power Consumption in kWh**
+ 
+ ![kWh](images/private-power-consumption-kwh.png)
 
  **Pricing Models with Load Balancer**
  
