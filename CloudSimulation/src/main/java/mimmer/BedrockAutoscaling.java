@@ -1,5 +1,7 @@
 package mimmer;
 
+import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicyBestFit;
+import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicyRoundRobin;
 import org.cloudbus.cloudsim.brokers.DatacenterBroker;
 import org.cloudbus.cloudsim.brokers.DatacenterBrokerSimple;
 import org.cloudbus.cloudsim.cloudlets.Cloudlet;
@@ -39,9 +41,9 @@ import java.util.function.Predicate;
 import static java.util.Comparator.comparingDouble;
 import static java.util.Comparator.comparingLong;
 
-public class BedrockPrivate {
+public class BedrockPrivateLoadBalancer {
 
-    // Conversion
+    //Conversion
     int GB = 1000;
 
     //Datacenter(s)
@@ -49,7 +51,8 @@ public class BedrockPrivate {
     private static final int scheduling_interval = 5; // Sets the scheduling delay to process each event received by the Datacenter (Seconds)
     private static final int cloudlets_creation_interval = scheduling_interval * 2; // Interval between creation of cloudlets
 
-    // Host properties
+
+    //Host properties
     private int hosts = 10; // 10 Hosts representing physical servers
     private int host_mips = 1000; // Million instructions per second (MIPS) of each host
     private int host_pes = 500; // 32 CPU Cores per host
@@ -60,24 +63,24 @@ public class BedrockPrivate {
     private int host_shutdown_delay = 5; // Seconds
     private int host_startup_power = 50; // Startup power in Watts
     private int host_shutdown_power = 10; // Shutdown power in Watts
-    private int host_static_power = 100; // Idle power in Watts
-    private int host_max_power = 700; // Max power in Watts
+    private int static_power = 100; // Idle power in Watts
+    private int max_power = 700; // Max power in Watts
 
     // Virtual Machines
-    private int VMs = hosts*2; // Amount of virtual machines in total
+    private int VMs = hosts*5; // Amount of virtual machines in total
     private int VM_ram = 8*GB; // RAM of each virtual machine (MB)
     private int VM_pes = 8; // CPU cores per virtual machine
     private int VM_bw = 500000; // Bandwidth capacity per virtual machine (Mbps)
     private int VM_storage = 50000; // Storage capacity per virtual machine (MB)
-    private int VM_static_power = 30;
+    private int createdVms;
     private int VM_max_power = 200;
+    private int VM_static_power = 30;
 
     // Cloudlets (User-defined workload)
     private int cloudlets = 0; // Initial amount of cloudlets representing workload (Can be set to 0 for dynamic cloudlets only)
     private int cloudlet_pes = 2; // Number of required PE's to run each cloudlet
     private static final long[] CLOUDLET_LENGTHS = {10000, 20000, 30000, 40000, 50000}; // Range of possible cloudlet sizes
     private int createdCloudlets; // Variable tracking number of created cloudlets
-
 
     // Declaration of other simulation components
     private final CloudSim simulation;
@@ -89,15 +92,15 @@ public class BedrockPrivate {
     private final ContinuousDistribution rand;
 
     public static void main(String[] args) {
-        new BedrockPrivate();
+        new BedrockPrivateLoadBalancer();
     }
-    private BedrockPrivate() {
+    private BedrockPrivateLoadBalancer() {
 
         final long seed = 1;
         rand = new UniformDistr(0, CLOUDLET_LENGTHS.length, seed);
         hostList = new ArrayList<>(hosts);
+        vmList = new ArrayList<>(VMs);
         cloudletList = new ArrayList<>(cloudlets);
-        vmList = createVms();
         createCloudletList();
 
         simulation = new CloudSim();
@@ -106,7 +109,9 @@ public class BedrockPrivate {
         datacenter = createDatacenter();
 
         broker = new DatacenterBrokerSimple(simulation);
-        //broker.setVmDestructionDelay(60.0);
+        broker.setVmDestructionDelay(60.0);
+
+        vmList.addAll(createListOfScalableVms(VMs));
 
         broker.submitVmList(vmList);
         broker.submitCloudletList(cloudletList);
@@ -116,7 +121,7 @@ public class BedrockPrivate {
         printSimulationResults();
         printTotalVmsCost();
         //printHostCpuUtilizationAndPowerConsumption(simulation);
-        //printVmsCpuUtilizationAndPowerConsumption(simulation);
+        printVmsCpuUtilizationAndPowerConsumption(simulation);
         //printHostsUpTime();
 
     }
@@ -130,7 +135,7 @@ public class BedrockPrivate {
         final Datacenter dc = new DatacenterSimple(simulation, hostList).setSchedulingInterval(scheduling_interval);
 
         //Pay-per-use pricing model (Dollars) (Only takes in CPU use and factors time)
-       dc.getCharacteristics()
+        dc.getCharacteristics()
                 .setCostPerSecond(0.00045)
                 .setCostPerMem(0)
                 .setCostPerStorage(0)
@@ -143,7 +148,6 @@ public class BedrockPrivate {
                 .setCostPerStorage(0.00001)
                 .setCostPerBw(0.000005);
 */
-
         return dc;
     }
 
@@ -156,8 +160,8 @@ public class BedrockPrivate {
 
         final var host = new HostSimple(host_ram, host_bw, host_storage, peList);
 
-        final var powerModel = new PowerModelHostSimple(host_max_power, host_static_power);
-        powerModel.setStartupDelay(host_startup_delay)
+        final var powerModel = new PowerModelHostSimple(max_power, static_power);
+       powerModel.setStartupDelay(host_startup_delay)
                 .setShutDownDelay(host_shutdown_delay)
                 .setStartupPower(host_startup_power)
                 .setShutDownPower(host_shutdown_power);
@@ -173,17 +177,39 @@ public class BedrockPrivate {
         return host;
     }
 
-    private List<Vm> createVms() {
-        final var vmList = new ArrayList<Vm>(VMs);
-        for (int i = 0; i < VMs; i++) {
-            //Uses a CloudletSchedulerTimeShared by default to schedule Cloudlets
-            final var vm = new VmSimple(host_mips, VM_pes);
-            vm.setRam(VM_ram).setBw(VM_bw).setSize(VM_storage);
+    private Vm createVm() {
+        final int id = createdVms++;
+        final var vm = new VmSimple(id, host_mips, VM_pes);
+        vm.setRam(VM_ram).setBw(VM_bw).setSize(VM_storage);
+        vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
+        vm.enableUtilizationStats();
+
+        return vm;
+
+    }
+
+    private List<Vm> createListOfScalableVms(final int vmsNumber) {
+        final List<Vm> newList = new ArrayList<>(vmsNumber);
+        for (int i = 0; i < vmsNumber; i++) {
+            final Vm vm = createVm();
+            createHorizontalVmScaling(vm);
             vm.enableUtilizationStats();
-            vmList.add(vm);
+            newList.add(vm);
         }
 
-        return vmList;
+        return newList;
+    }
+
+    private void createHorizontalVmScaling(final Vm vm) {
+        final HorizontalVmScaling horizontalScaling = new HorizontalVmScalingSimple();
+        horizontalScaling
+                .setVmSupplier(this::createVm)
+                .setOverloadPredicate(this::isVmOverloaded);
+        vm.setHorizontalScaling(horizontalScaling);
+    }
+
+    private boolean isVmOverloaded(final Vm vm) {
+        return vm.getCpuPercentUtilization() > 0.7;
     }
 
     private void printTotalVmsCost() {
@@ -192,6 +218,12 @@ public class BedrockPrivate {
         int totalNonIdleVms = 0;
         double processingTotalCost = 0, memoryTotaCost = 0, storageTotalCost = 0, bwTotalCost = 0;
         for (final Vm vm : broker.getVmCreatedList()) {
+
+            //Removing unutilized VMs from the calculation
+            if(Double.isNaN(vm.getCpuUtilizationStats().getMean()) || vm.getCpuUtilizationStats().getMean() == 0.0) {
+                continue;
+            }
+
             final VmCost cost = new VmCost(vm);
             processingTotalCost += cost.getProcessingCost();
             memoryTotaCost += cost.getMemoryCost();
@@ -212,17 +244,17 @@ public class BedrockPrivate {
         double totalCpuMean = 0;
         double totalHostPowerConsumption = 0;
 
-        for (Host host : hostList) {
-            final HostResourceStats cpuStats = host.getCpuUtilizationStats();
+        for (Host h : hostList) {
+            final HostResourceStats cpuStats = h.getCpuUtilizationStats();
 
-        //The total Host's CPU utilization for the time specified by the map key
-        final double utilizationPercentMean = cpuStats.getMean();
+            //The total Host's CPU utilization for the time specified by the map key
+            final double utilizationPercentMean = cpuStats.getMean();
             totalCpuMean += utilizationPercentMean*100;
-        final double watts = host.getPowerModel().getPower(utilizationPercentMean);
+            final double watts = h.getPowerModel().getPower(utilizationPercentMean);
             totalHostPowerConsumption += watts;
-        System.out.printf(
-                "Host %2d CPU Usage mean: %6.1f%% | Power Consumption mean: %8.0f W%n",
-                host.getId(), utilizationPercentMean * 100, watts);
+            System.out.printf(
+                    "Host %2d CPU Usage mean: %6.1f%% | Power Consumption mean: %8.0f W%n",
+                    h.getId(), utilizationPercentMean * 100, watts);
 
         }
 
@@ -237,18 +269,29 @@ public class BedrockPrivate {
         System.out.println(averageHostPowerConsumption*sim.clock());
         System.out.println("---------Host kWh annually---------");
         System.out.println((((averageHostPowerConsumption*sim.clock())*sim.clockInHours())/1000)*365);
-    }
 
+    }
     private void printVmsCpuUtilizationAndPowerConsumption(Simulation sim) {
         vmList.sort(comparingLong(vm -> vm.getHost().getId()));
         double totalCpuMean = 0;
         double totalVmPowerConsumption = 0;
-        double vmPower = 0;
+        int vmListSize = 0;
+
+        for (Vm vms : vmList) {
+            if(Double.isNaN(vms.getCpuUtilizationStats().getMean()) || vms.getCpuUtilizationStats().getMean() == 0.0) {
+                vms.getHost().destroyVm(vms);
+        } else {
+            vmListSize += 1;
+            }
+        }
 
         for (Vm vm : vmList) {
+            //Removing unutilized VMs from the calculation
+            if(Double.isNaN(vm.getCpuUtilizationStats().getMean()) || vm.getCpuUtilizationStats().getMean() == 0.0) {
+                continue;
+            }
 
-            vmPower = VM_static_power + (VM_max_power*vm.getCpuUtilizationStats().getMean());
-
+            final double vmPower = VM_static_power + (VM_max_power*vm.getCpuUtilizationStats().getMean());
             totalVmPowerConsumption += vmPower;
             final VmResourceStats cpuStats = vm.getCpuUtilizationStats();
             totalCpuMean += cpuStats.getMean()*100;
@@ -256,18 +299,17 @@ public class BedrockPrivate {
                     "Vm   %2d CPU Usage Mean: %6.1f%% | Power Consumption Mean: %8.0f W%n",
                     vm.getId(), cpuStats.getMean() *100, vmPower);
         }
-
-        double averageCpuMean = totalCpuMean / vmList.size();
-        double averageVmPowerConsumption = totalVmPowerConsumption / vmList.size();
+        double averageCpuMean = totalCpuMean / vmListSize;
+        double averageVmPowerConsumption = totalVmPowerConsumption / vmListSize;
 
         System.out.println("--------Average CPU Mean-------");
         System.out.println(averageCpuMean);
         System.out.println("--------Average VM Power Consumption-----");
         System.out.println(averageVmPowerConsumption);
         System.out.println("------Total VM Power Consumption------");
-        System.out.println(averageVmPowerConsumption*vmList.size()*sim.clock());
+        System.out.println(averageVmPowerConsumption*vmListSize*sim.clock());
         System.out.println("---------VM kWh---------");
-        System.out.println((((averageVmPowerConsumption*vmList.size()*sim.clock())*sim.clockInHours())/1000));
+        System.out.println((((averageVmPowerConsumption*vmListSize)*sim.clockInHours())/1000));
     }
     private void printHostsUpTime() {
         System.out.printf("%nHosts' up time (total time each Host was powered on)%n");
@@ -285,11 +327,12 @@ public class BedrockPrivate {
 
         });
     }
+
     private void createNewCloudlets(final EventInfo info) {
         final long time = (long) info.getTime();
         System.out.println(time);
         if (time % cloudlets_creation_interval == 0 && time < 20) {
-            final int cloudletsNumber = 300;
+            final int cloudletsNumber = 200;
             System.out.printf("\t#Creating %d Cloudlets at time %d.%n", cloudletsNumber, time);
             final List<Cloudlet> newCloudlets = new ArrayList<>(cloudletsNumber);
             for (int i = 0; i < cloudletsNumber; i++) {
@@ -321,15 +364,17 @@ public class BedrockPrivate {
     }
     private void printSimulationResults() {
         final List<Cloudlet> finishedCloudlets = broker.getCloudletFinishedList();
-        int cloudletsNumber = finishedCloudlets.size();
         final Comparator<Cloudlet> sortByVmId = comparingDouble(c -> c.getVm().getId());
         final Comparator<Cloudlet> sortByStartTime = comparingDouble(Cloudlet::getExecStartTime);
         finishedCloudlets.sort(sortByVmId.thenComparing(sortByStartTime));
 
         new CloudletsTableBuilder(finishedCloudlets).build();
 
+        int cloudletsNumber = finishedCloudlets.size();
+
         System.out.println("----------------------------");
         System.out.println(cloudletsNumber);
         System.out.println("----------------------------");
+
     }
 }

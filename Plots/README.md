@@ -1,28 +1,47 @@
  
- # Private Deployment
+ # Bedrock Evaluation Results
  
-**Execution Times**
+**Execution Time**
+
+ performance.py
  
- ![png1](images/private-performance.png)
+ ![png1](images/performance.png)
 
- **Total Power Consumption**
+ **Total Energy Consumption**
 
- ![png2](images/private-power-consumption.png)
+ energy-consumption.py
+
+ ![png2](images/energy_consumption.png)
 
  **Power Consumption in kWh**
- 
- ![kWh](images/private-power-consumption-kwh.png)
 
- **Pricing Models with Load Balancer**
+ energy-consumption-kwh.py
  
- ![png3](images/private-pricing-models.png)
+ ![kWh](images/energy_consumption_kwh.png)
+
+ **Pricing Models without Auto-scaling & Load-Balancer**
+
+ pricing-models.py
+
+ ![png3](images/pricing_line.png)
+
+ pricing-models-bar.py
+
+ ![123](images/pricing_bar.png)
 
  **Pricing Models without Load Balancer**
 
- ![png4](images/private-pricing-models-loadbalancer.png)
+ pricing-models-autoscaling.py
+
+ ![png4](images/pricing_line_autoscaling.png)
+
+ pricing-models-bar-autoscaling.py
+
+ ![124](images/pricing_bar_autoscaling.png)
 
  **CPU Utilization**
 
- ![png5](images/private-cpu-utilization.png)
+ cpu-utilization.py
 
- # Public Deployment
+ ![png5](images/cpu_utilization.png)
+
