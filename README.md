@@ -1,5 +1,5 @@
 # MSc-Thesis
-**Title:** Cloud Deployment Model Simulation: Leveraging Simulation Tools for Improved Consulting Practice 
+**Title:** Cloud Deployment Model Simulation: Leveraging Simulation Tools for Improved Consulting Practices
 
 **Submission Date:** 1/06/2023
 
