@@ -12,7 +12,9 @@ y1 = np.array([170, 170, 170, 170, 170, 170, 170, 170, 170, 170])
 
 sns.set_style("dark")
 sns.set_palette("tab10")
-plt.grid(color='white', linestyle='-.', linewidth=0.5)  # Add grid pattern
+
+# Add grid pattern
+plt.grid(color='white', linestyle='-.', linewidth=0.5)  
 
 sns.lineplot(x=x, y=y, label='Pay-as-you-go', linewidth=2)
 sns.lineplot(x=x1, y=y1, label='Subscription', linewidth=2)

@@ -11,7 +11,10 @@ y1 = np.array([0.0070, 0.0178, 0.0814, 0.3286, 1.2214, 2.5732, 4.4469])
 
 sns.set_style("dark")
 sns.set_palette("tab10")
-plt.grid(color='white', linestyle='-.', linewidth=0.5)  # Add grid pattern
+
+# Add grid pattern
+plt.grid(color='white', linestyle='-.', linewidth=0.5)  
+
 sns.barplot(x=x, y=y, color='blue')
 sns.barplot(x=x1, y=y1, color='green')
 

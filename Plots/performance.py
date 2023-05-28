@@ -12,7 +12,9 @@ y1 = np.array([60.52, 65.52, 115.52, 195.52, 495.85, 925.85, 1515.85])
 
 sns.set_style("dark")
 sns.set_palette("tab10")
-plt.grid(color='white', linestyle='-.', linewidth=0.5)  # Add grid pattern
+
+# Add grid pattern
+plt.grid(color='white', linestyle='-.', linewidth=0.5)  
 
 sns.lineplot(x=x, y=y, label='Without Auto-scaling & Load-balancer', linewidth=2.5)
 sns.lineplot(x=x1, y=y1, label='With Auto-scaling & Load-balancer', linewidth=2.5)

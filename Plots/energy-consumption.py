@@ -12,7 +12,9 @@ y1 = np.array([25337, 64251, 293164, 1182974, 4397304, 9263742, 16008984])
 
 sns.set_style("dark")
 sns.set_palette("tab10")
-plt.grid(color='white', linestyle='-.', linewidth=0.5)  # Add grid pattern
+
+# Add grid pattern
+plt.grid(color='white', linestyle='-.', linewidth=0.5)  
 
 plt.plot(x, y, label='Without Auto-scaling & Load-balancer', color='tab:blue', linewidth=2.5)
 plt.plot(x1, y1, label='With Auto-scaling & Load-balancer', color='tab:orange', linewidth=2.5)
@@ -23,6 +25,7 @@ plt.fill_between(x, y, y1, color='gray', alpha=0.3)
 plt.xlabel("Number of Cloudlets", fontsize=12)
 plt.ylabel("Energy Consumption (Joules)", fontsize=12)
 plt.legend(loc='upper left', fontsize=12)
+
 plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 
