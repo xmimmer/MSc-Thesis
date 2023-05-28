@@ -6,7 +6,9 @@
 **Author:** Mads Møller Hansen 
 
 ---
-**Simulation Files:** CloudSimulation/src/main/java/mimmer/
 
-**Python Scripts:** Plots/ 
+[Simulation Files](CloudSimulation/src/main/java/mimmer/)
+
+[Python Scripts](Plots)
+
 
